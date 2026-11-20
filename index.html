@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-fwFC7pM8vIxR36YEz/RWYn9ASGz3fdfSy8pvZ/G0bC0='; style-src 'self' 'unsafe-inline'; font-src data:; img-src 'self' data:; connect-src 'self' https://world.openfoodfacts.org https://search.openfoodfacts.org; manifest-src 'self'; worker-src 'self'; media-src 'self' blob:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-iibpdLX2k31JllpKP5vRqWk9QTAPTuLKxAbXNh6pd2c='; style-src 'self' 'unsafe-inline'; font-src data:; img-src 'self' data:; connect-src 'self' https://world.openfoodfacts.org https://search.openfoodfacts.org; manifest-src 'self'; worker-src 'self'; media-src 'self' blob:; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <title>Macros</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -529,6 +529,10 @@ p,.fine,.intro,small,.idea-t span{text-wrap:pretty}
   *,*::before,*::after{corner-shape:squircle}
   .scanb,.stp,.legend span::before{corner-shape:round}
 }
+
+/* ===== 3.4: colour carries status only ===== */
+.bar.met i{background:var(--ok)}
+.bar.warn i,.bar.lim.near i{background:var(--mid)}
 </style>
 </head>
 <body>
@@ -554,7 +558,7 @@ p,.fine,.intro,small,.idea-t span{text-wrap:pretty}
 (function(){
 'use strict';
 if(window.top!==window.self){ const m=document.getElementById('app'); m.textContent=''; const p=document.createElement('p'); p.className='loading'; p.textContent='For your security, Macros can’t be opened inside another page. Open it directly instead.'; m.appendChild(p); document.querySelector('.nav').hidden=true; return; }
-const VERSION='3.3';
+const VERSION='3.4';
 /* ---------- data ---------- */
 const DATA=JSON.parse(document.getElementById('afcd').textContent);
 const PRESETS=JSON.parse(document.getElementById('presets').textContent);
@@ -979,9 +983,9 @@ function kstripHTML(day,t,tot,over){
 function viewToday(){
   const t=targets(),day=getDay(UI.date),tot=dayTotals(day),left=t.kcal-tot.kcal,over=left<0;
   const past=UI.date<todayStr();
-  const macro=k=>{ const p=t[k]?tot[k]/t[k]:0; return `<div class="mcell tap" data-a="contrib" data-k="${k}" role="button" tabindex="0"><div class="mh"><span class="nm">${NUT[k][0]}</span><span class="val">${num(tot[k])} <span>/ ${num(t[k])} g</span></span></div><div class="bar${p>1.05&&k!=='p'&&k!=='fib'?' over':''}"><i data-bk="${k}" style="width:${Math.min(100,p*100).toFixed(1)}%"></i></div></div>`; };
+  const macro=k=>{ const p=t[k]?tot[k]/t[k]:0; return `<div class="mcell tap" data-a="contrib" data-k="${k}" role="button" tabindex="0"><div class="mh"><span class="nm">${NUT[k][0]}</span><span class="val">${num(tot[k])} <span>/ ${num(t[k])} g</span></span></div><div class="bar${(k==='p'||k==='fib')?(p>=1?' met':''):(p>1.05?' warn':'')}"><i data-bk="${k}" style="width:${Math.min(100,p*100).toFixed(1)}%"></i></div></div>`; };
   // limit bars run to 120% of the limit; the dark mark at 83% is the limit itself
-  const limTile=(k,label,u)=>{ const p=t[k]?tot[k]/t[k]:0; return `<div class="mcell tap" data-a="contrib" data-k="${k}" role="button" tabindex="0" aria-label="${label}: ${num(tot[k],u)} of a ${num(t[k],u)} ${u} limit"><div class="mh"><span class="nm">${label}</span><span class="val">${num(tot[k],u)} <span>/ ${num(t[k],u)} ${u}</span></span></div><div class="bar lim${p>1?' over':''}"><i data-bk="${k}" style="width:${(Math.min(1.2,p)/1.2*100).toFixed(1)}%"></i></div></div>`; };
+  const limTile=(k,label,u)=>{ const p=t[k]?tot[k]/t[k]:0; return `<div class="mcell tap" data-a="contrib" data-k="${k}" role="button" tabindex="0" aria-label="${label}: ${num(tot[k],u)} of a ${num(t[k],u)} ${u} limit"><div class="mh"><span class="nm">${label}</span><span class="val">${num(tot[k],u)} <span>/ ${num(t[k],u)} ${u}</span></span></div><div class="bar lim${p>1?' over':p>0.8?' near':''}"><i data-bk="${k}" style="width:${(Math.min(1.2,p)/1.2*100).toFixed(1)}%"></i></div></div>`; };
   const wl=weights(),wToday=wl[UI.date];
   let meals='';
   for(const [mk,mn] of MEALS){

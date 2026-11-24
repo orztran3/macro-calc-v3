@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-xkXePhS4cskDVLC+wrUkOEsi4qetGdk8aSNx9+IANyE='; style-src 'self' 'unsafe-inline'; font-src data:; img-src 'self' data:; connect-src 'self' https://world.openfoodfacts.org https://search.openfoodfacts.org; manifest-src 'self'; worker-src 'self'; media-src 'self' blob:; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-okqBgKPZDbnFmmrfXKXGoYOTVE4pe6Zv+rpXqA2LG6I='; style-src 'self' 'unsafe-inline'; font-src data:; img-src 'self' data:; connect-src 'self' https://world.openfoodfacts.org https://search.openfoodfacts.org; manifest-src 'self'; worker-src 'self'; media-src 'self' blob:; base-uri 'none'; form-action 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <title>Macros</title>
 <link rel="manifest" href="manifest.webmanifest">
@@ -189,6 +189,7 @@ details.more-n summary{cursor:pointer;font-weight:600;color:var(--accent)}
 .tt td:last-child{text-align:right;font:500 18px var(--cond)}
 .switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:18px;font-weight:500}
 .switch input{width:22px;height:22px;accent-color:var(--accent)}
+.sc-list{list-style:none;padding:0;margin:8px 0 4px;font-size:16px}.sc-list li{padding:8px 0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.sc-k{color:var(--muted)}.sc-copy{width:100%;margin-top:8px;font:inherit;font-size:15px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px}
 .status{border-left:3px solid var(--accent);padding:4px 0 4px 12px;margin:10px 0 14px;font-size:16px}
 textarea{width:100%;min-height:110px;font:13px/1.4 ui-monospace,Menlo,Consolas,monospace;padding:10px;border:1px solid var(--line);border-radius:var(--r-m);background:var(--surface);color:var(--ink);margin-top:8px}
 .people{list-style:none;margin:0;padding:0}
@@ -576,7 +577,7 @@ p,.fine,.intro,small,.idea-t span{text-wrap:pretty}
 (function(){
 'use strict';
 if(window.top!==window.self){ const m=document.getElementById('app'); m.textContent=''; const p=document.createElement('p'); p.className='loading'; p.textContent='For your security, Macros can’t be opened inside another page. Open it directly instead.'; m.appendChild(p); document.querySelector('.nav').hidden=true; return; }
-const VERSION='3.21';
+const VERSION='3.24';
 /* ---------- data ---------- */
 const DATA=JSON.parse(document.getElementById('afcd').textContent);
 const PRESETS=JSON.parse(document.getElementById('presets').textContent);
@@ -1262,6 +1263,20 @@ function viewSetup(){
 function startSetup(isNew){ const p=hasProfile()?getProfile():{}; UI.setup={isNew:isNew||!hasProfile(),name:Store.personName(),sex:p.sex||'',age:p.age||null,height:p.height||null,weight:p.weight||null,activity:p.activity||1.55,goal:p.goal||''}; UI.view='setup'; }
 
 function grp(key,title,note,body){ const open=UI.open[key]; return `<details class="grp" data-g="${key}"${open?' open':''}><summary><span><h3>${title}</h3>${note?`<span class="sum-note">${note}</span>`:''}</span><span class="chev" aria-hidden="true"><span class="i i-right sm"></span></span></summary><div class="grp-body">${body}</div></details>`; }
+// 3.24: Profile > Self-check. Facts about this phone for the user to paste into chat; Open Food Facts only on tap.
+const SC={rows:[],off:null};
+async function scGather(){ const r=[['Version',VERSION]]; let sw='unknown';
+  try{ const reg=navigator.serviceWorker?await navigator.serviceWorker.getRegistration():null, keys=window.caches?(await caches.keys()).filter(k=>/^macros/.test(k)):[];
+    sw=(navigator.serviceWorker&&navigator.serviceWorker.controller?'yes':reg&&reg.active?'installed, active after reopening':'no')+(keys.length?', cache '+keys.join(', '):', no cache'); }catch(e){}
+  r.push(['Offline ready',sw]); let pers='unknown',used='unknown';
+  try{ if(navigator.storage&&navigator.storage.persisted) pers=(await navigator.storage.persisted())?'yes':'no';
+    if(navigator.storage&&navigator.storage.estimate){ const e=await navigator.storage.estimate(); used=(e.usage/1048576).toFixed(1)+' MB of '+Math.round(e.quota/1048576)+' MB'; } }catch(e){}
+  r.push(['Storage kept',pers],['Storage used',used],['Saved in',Store.kind==='idb'?'IndexedDB':Store.kind==='local'?'browser storage':'nowhere (blocked)']);
+  let cam='not reported by this browser'; try{ cam=(await navigator.permissions.query({name:'camera'})).state; }catch(e){}
+  r.push(['Camera',cam],['Online',navigator.onLine?'yes':'no']); return r; }
+const scRows=()=>SC.rows.concat(SC.off?[['Open Food Facts',SC.off]]:[]);
+const scHTML=()=>SC.rows.length||SC.off?`<ul class="sc-list">${scRows().map(([k,v])=>`<li><span class="sc-k">${esc(k)}:</span> ${esc(v)}</li>`).join('')}</ul>`:'';
+function scRender(){ const el=$('#sc'); if(el) el.innerHTML=scHTML(); }
 function viewProfile(){
   const p=getProfile(),chip=(k,v,l)=>`<button class="chip" data-a="pset" data-k="${k}" data-v="${v}" aria-pressed="${p[k]===v}">${l}</button>`;
   const storeMsg=Store.kind==='idb'?'Saved on this device.':Store.kind==='local'?'Saved in this browser.':'Not saved. This browser blocks storage, so export a backup before closing.';
@@ -1302,6 +1317,7 @@ function viewProfile(){
   ${grp('ideas','Food ideas',(()=>{ const q=ideaPrefs(); return q.off.length+q.ex.length+q.kw.length?`${q.off.length} type${q.off.length===1?'':'s'} off, ${q.ex.length+q.kw.length} blocked`:'All food types on'; })(),ideasProfileHTML())}
   <h3 class="psec">Data</h3>
   ${grp('backup','Backup',agoTxt,backup)}
+  ${grp('selfcheck','Self-check','Version '+VERSION,`<p class="fine" style="margin-top:0">Checks this phone: offline readiness, storage and camera. Open Food Facts is contacted only when you tap its test.</p><div id="sc">${scHTML()}</div><div class="row-actions" style="margin-top:8px"><button class="ghost" data-a="scRun">Run self-check</button><button class="ghost" data-a="scOff">Test Open Food Facts</button><button class="ghost" data-a="scCopy">Copy report</button></div>`)}
   <p class="fine" style="margin-top:22px">Version ${VERSION}. Fonts: Barlow and Barlow Condensed (SIL Open Font License). Restaurant chain data for McDonald’s, KFC, Red Rooster, Grill’d and 10 other chains: Nutrition data from Macro Menu (macromenu.com.au), free licence, November 2026 snapshot. Food composition data: Australian Food Composition Database, Release 3, and AUSNUT 2023, Food Standards Australia New Zealand. Restaurant data: Guzman y Gomez nutrition guide (8 Oct 2026) and Zambrero nutrition guide V7.4 (14 Jul 2026). Supermarket products: Woolworths product pages, CHOICE and other cited sources, as at Nov 2026; labels change, so check the pack. Nutrient targets and upper levels: NHMRC Nutrient Reference Values; food-idea serve sizes: Australian Dietary Guidelines standard serves; free sugars limit: WHO (under 10% of energy). Barcode lookups and online search use Open Food Facts data, available under the Open Database Licence (community-entered, so check values against the label). Calorie targets use the Mifflin-St Jeor equation.</p>`;
 }
 function consHTML(p){ const c=p.cons, inp=(k,l)=>`<label class="fl">${l}<input class="num-in" type="number" inputmode="numeric" min="0" max="50" step="1" data-in="pcons" data-k="${k}" value="${c[k]}"></label>`;
@@ -1993,6 +2009,12 @@ const ACT={
   entry:el=>openEntry(el.dataset.id),
   delEntry:el=>{ if(!confirmGate(el)) return; const day=ensureDay(UI.date); const idx=day.entries.findIndex(x=>x.id===SH.entry.id), gone=day.entries[idx]; day.entries=day.entries.filter(x=>x.id!==SH.entry.id); saveDay(day); Sheet.close(); renderFx(); toast('Removed',gone?{undo:()=>{ const d=ensureDay(day.date); d.entries.splice(Math.min(idx,d.entries.length),0,gone); saveDay(d); if(UI.date===day.date) renderFx([gone.id]); }}:null); },
   copySheet:el=>openCopy(el.dataset.meal),
+  scRun:async()=>{ SC.rows=await scGather(); scRender(); },
+  scOff:async()=>{ if(!SC.rows.length) SC.rows=await scGather(); const t0=performance.now();
+    try{ const r=await offFetch('https://world.openfoodfacts.org/api/v2/product/3017620422003.json?fields=code',6000); SC.off=r.ok?'reachable ('+Math.round(performance.now()-t0)+' ms)':'not reachable (HTTP '+r.status+')'; }catch(e){ SC.off='not reachable'; }
+    scRender(); },
+  scCopy:async()=>{ if(!SC.rows.length) SC.rows=await scGather(); scRender(); const txt=['Macros self-check '+todayStr(),...scRows().map(([k,v])=>k+': '+v)].join('\n');
+    try{ await navigator.clipboard.writeText(txt); toast('Report copied: paste it into the chat'); }catch(e){ const el=$('#sc'); if(el) el.insertAdjacentHTML('beforeend',`<textarea class="sc-copy" readonly rows="9" aria-label="Self-check report">${esc(txt)}</textarea>`); } },
   quickCopy:el=>{ const src=getDay(el.dataset.d),meal=el.dataset.meal,day=ensureDay(UI.date),es=src.entries.filter(e=>e.meal===meal), ids=[]; for(const e of es){ const c=clone(e); c.id=uid(); c.t=Date.now(); day.entries.push(c); ids.push(c.id); } saveDay(day); renderFx(ids); toast(`Copied ${es.length} item${es.length===1?'':'s'}`,{undo:undoRemove(day.date,ids)}); },
   microToggle:el=>{ UI.microOpen=!UI.microOpen; el.setAttribute('aria-expanded',UI.microOpen); $('#microlist').hidden=!UI.microOpen; },
   wdateShow:el=>{ UI.wdate=true; $('#wdatel').hidden=false; el.remove(); },

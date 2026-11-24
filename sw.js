@@ -1,5 +1,5 @@
 /* Macros service worker: keeps the app usable offline. Bump CACHE when you upload a new version. */
-const CACHE = 'macros3-v3.18';
+const CACHE = 'macros3-v3.21';
 const SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', e => {
